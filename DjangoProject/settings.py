@@ -56,7 +56,7 @@ ROOT_URLCONF = 'DjangoProject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],  # Keep empty unless you have custom global template folders
+        'DIRS': [],  # Ensure this points to any custom directories if needed
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -68,6 +68,7 @@ TEMPLATES = [
         },
     },
 ]
+
 
 
 WSGI_APPLICATION = 'DjangoProject.wsgi.application'
