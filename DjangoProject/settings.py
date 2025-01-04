@@ -103,6 +103,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+LOGIN_URL = '/accounts/login/'  # Redirect to login page if not authenticated
+LOGOUT_REDIRECT_URL = '/'  # Redirect after logout
+LOGIN_REDIRECT_URL = '/inventory/'  # Redirect after login
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
