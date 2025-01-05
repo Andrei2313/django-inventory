@@ -41,40 +41,44 @@ class InventoryItemViewTests(TestCase):
         self.assertContains(response, '<form')
 
     def test_add_inventory_item_view_post_valid(self):
+        """
+        Test that when valid form data is provided, the form is saved and the user is redirected.
+        """
         # Define valid form data
         form_data = {
             'name': 'New Test Item',
             'quantity': 10,
-            'description': 'A new test item',
+            'description': 'A new test item added via the form',
         }
 
         # Send a POST request with valid data to the 'add_inventory_item' view
         response = self.client.post(reverse('add_inventory_item'), data=form_data)
 
-        # Check if the response is a redirect (should redirect to the inventory list)
+        # Check if the response is a redirect (302 - should redirect to the inventory list)
         self.assertEqual(response.status_code, 302)
 
-        # Check if the new item exists in the database
+        # Verify that the new item exists in the database
         self.assertTrue(InventoryItem.objects.filter(name='New Test Item').exists())
 
-        # Check if the redirect URL is correct
+        # Check that the redirect is to the 'inventory_list' view
         self.assertRedirects(response, reverse('inventory_list'))
 
     def test_add_inventory_item_view_post_invalid(self):
-        # Test if the 'add inventory item' view handles invalid data
-        self.client.login(username='testuser', password='password')
-
-        # Define invalid form data (missing required field)
+        """
+        Test that when invalid form data is provided, the form is re-rendered with errors.
+        """
+        # Define invalid form data (missing a required field, such as name)
         form_data = {
-            'name': '',
+            'name': '',  # Name is empty, so the form should be invalid
             'quantity': 10,
-            'description': 'A test item without name',
+            'description': 'A test item without a name',
         }
 
+        # Send a POST request with invalid data to the 'add_inventory_item' view
         response = self.client.post(reverse('add_inventory_item'), data=form_data)
 
-        # Check if the response status is 200 (OK) because the form is invalid
+        # Check if the response status code is 200 (the form should re-render because the form is invalid)
         self.assertEqual(response.status_code, 200)
 
-        # Check if the form has errors
+        # Check if the form contains the appropriate error for the 'name' field
         self.assertFormError(response, 'form', 'name', 'This field is required.')
