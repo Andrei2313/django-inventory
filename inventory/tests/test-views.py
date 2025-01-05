@@ -41,9 +41,6 @@ class InventoryItemViewTests(TestCase):
         self.assertContains(response, '<form')
 
     def test_add_inventory_item_view_post_valid(self):
-        # Test if the 'add inventory item' view works with valid data
-        self.client.login(username='testuser', password='password')
-
         # Define valid form data
         form_data = {
             'name': 'New Test Item',
@@ -51,6 +48,7 @@ class InventoryItemViewTests(TestCase):
             'description': 'A new test item',
         }
 
+        # Send a POST request with valid data to the 'add_inventory_item' view
         response = self.client.post(reverse('add_inventory_item'), data=form_data)
 
         # Check if the response is a redirect (should redirect to the inventory list)
@@ -58,6 +56,9 @@ class InventoryItemViewTests(TestCase):
 
         # Check if the new item exists in the database
         self.assertTrue(InventoryItem.objects.filter(name='New Test Item').exists())
+
+        # Check if the redirect URL is correct
+        self.assertRedirects(response, reverse('inventory_list'))
 
     def test_add_inventory_item_view_post_invalid(self):
         # Test if the 'add inventory item' view handles invalid data
