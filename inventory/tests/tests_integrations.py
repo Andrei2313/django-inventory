@@ -3,13 +3,12 @@ from django.test import TestCase
 from django.urls import reverse
 from unittest.mock import patch
 from inventory.models import InventoryItem
-from django.shortcuts import redirect
 
 
 class InventoryItemIntegrationTests(TestCase):
 
     @patch('inventory.forms.InventoryItemForm.save')
-    def test_add_inventory_item_integration_with_mocking(self, mock_save):
+    def test_add_inventory_item_with_mocking(self, mock_save):
         """
         Test that a valid form submission creates a new inventory item and redirects to the inventory list.
         Mock the save method to isolate the test.
@@ -22,8 +21,11 @@ class InventoryItemIntegrationTests(TestCase):
         }
 
         # Mock the save method to simulate saving the InventoryItem without hitting the database
-        mock_save.return_value = InventoryItem(name='Integrated Test Item with Mocking', quantity=25,
-                                               description='This item is tested through integration and mocking.')
+        mock_save.return_value = InventoryItem(
+            name='Integrated Test Item with Mocking',
+            quantity=25,
+            description='This item is tested through integration and mocking.'
+        )
 
         # Send a POST request to add the inventory item
         response = self.client.post(reverse('add_inventory_item'), data=form_data)
@@ -31,7 +33,7 @@ class InventoryItemIntegrationTests(TestCase):
         # Check that the response is a redirect (302), indicating that the form was saved and the user is redirected
         self.assertEqual(response.status_code, 302)
 
-        # Check that the mocked save method was called
+        # Check that the mocked save method was called exactly once
         mock_save.assert_called_once()
 
         # Verify that the redirect is to the inventory list page
@@ -56,5 +58,5 @@ class InventoryItemIntegrationTests(TestCase):
 
         # Check if the mocked inventory item is visible in the page content
         self.assertContains(response, 'Mocked Test Item')
-        self.assertContains(response, '10')
-        self.assertContains(response, 'Mocked description')
+        self.assertContains(response, '10')  # Quantity should be displayed
+        self.assertContains(response, 'Mocked description')  # Description should be displayed

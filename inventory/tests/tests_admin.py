@@ -1,83 +1,44 @@
-# your_app/tests/test_admin.py
+# inventory/tests/test_admin.py
 from django.test import TestCase
-from django.contrib.admin.sites import site
 from django.urls import reverse
+from django.contrib.admin.sites import site
 from django.contrib.auth.models import User
-from inventory.models import InventoryItem, Notification
+from inventory.models import Item, Order
 
 
 class AdminTests(TestCase):
 
     def setUp(self):
-        # Create a user for admin access
-        self.admin_user = User.objects.create_superuser(username='admin', password='password',
-                                                        email='admin@example.com')
-
-        # Create InventoryItem and Notification instances for testing
-        self.item = InventoryItem.objects.create(name="Test Item", quantity=10, description="Test description")
-        self.notification = Notification.objects.create(item=self.item, message="Test notification")
-
-    def test_inventory_item_model_registration(self):
-        # Log in as admin
+        """Create a superuser and items for testing the admin interface"""
+        self.user = User.objects.create_superuser(username='admin', password='password', email='admin@example.com')
         self.client.login(username='admin', password='password')
 
-        # Test if InventoryItem is registered in the admin site
-        response = self.client.get(reverse('admin:inventory_inventoryitem_changelist'))
+        self.item = Item.objects.create(name='Test Item', quantity=100)
+        self.order = Order.objects.create(item=self.item, quantity=5)
 
-        # Check if the response status code is 200 (OK)
-        self.assertEqual(response.status_code, 200)
+    def test_item_admin(self):
+        """Test that the Item model appears in the admin interface and lists correctly"""
+        url = reverse('admin:inventory_item_changelist')  # Admin URL for Item model
+        response = self.client.get(url)
 
-        # Check if the InventoryItem appears in the list page
-        self.assertContains(response, "Test Item")
+        # Check if the item appears in the list view
+        self.assertContains(response, self.item.name)
+        self.assertContains(response, self.item.quantity)
 
-    def test_notification_model_registration(self):
-        # Log in as admin
-        self.client.login(username='admin', password='password')
+    def test_order_admin(self):
+        """Test that the Order model appears in the admin interface and lists correctly"""
+        url = reverse('admin:inventory_order_changelist')  # Admin URL for Order model
+        response = self.client.get(url)
 
-        # Test if Notification is registered in the admin site
-        response = self.client.get(reverse('admin:inventory_notification_changelist'))
+        # Check if the order appears in the list view
+        self.assertContains(response, str(self.order))
+        self.assertContains(response, self.order.quantity)
 
-        # Check if the response status code is 200 (OK)
-        self.assertEqual(response.status_code, 200)
+    def test_order_inline_in_item_admin(self):
+        """Test that orders appear as inline models in the Item admin"""
+        url = reverse('admin:inventory_item_change', args=[self.item.pk])  # Admin URL for editing an item
+        response = self.client.get(url)
 
-        # Check if the Notification appears in the list page
-        self.assertContains(response, "Test notification")
-
-    def test_inventory_item_addition_in_admin(self):
-        # Log in as admin
-        self.client.login(username='admin', password='password')
-
-        # Test if the admin can add an InventoryItem
-        response = self.client.get(reverse('admin:inventory_inventoryitem_add'))
-        self.assertEqual(response.status_code, 200)
-
-        # Post data to add a new InventoryItem
-        form_data = {
-            'name': 'New Item',
-            'quantity': 15,
-            'description': 'New item added via admin',
-        }
-        response = self.client.post(reverse('admin:inventory_inventoryitem_add'), data=form_data)
-
-        # Check if the new item was successfully added
-        self.assertRedirects(response, reverse('admin:inventory_inventoryitem_changelist'))
-        self.assertTrue(InventoryItem.objects.filter(name='New Item').exists())
-
-    def test_notification_addition_in_admin(self):
-        # Log in as admin
-        self.client.login(username='admin', password='password')
-
-        # Test if the admin can add a Notification
-        response = self.client.get(reverse('admin:inventory_notification_add'))
-        self.assertEqual(response.status_code, 200)
-
-        # Post data to add a new Notification
-        form_data = {
-            'item': self.item.id,
-            'message': 'New notification from admin',
-        }
-        response = self.client.post(reverse('admin:inventory_notification_add'), data=form_data)
-
-        # Check if the new notification was successfully added
-        self.assertRedirects(response, reverse('admin:inventory_notification_changelist'))
-        self.assertTrue(Notification.objects.filter(message='New notification from admin').exists())
+        # Check if the order inline form is displayed
+        self.assertContains(response, 'Orders')  # Inline for orders should appear
+        self.assertContains(response, str(self.order))  # Check if the order is listed in the inline form

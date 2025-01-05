@@ -1,70 +1,90 @@
-# your_app/tests/test_forms.py
 from django.test import TestCase
-from inventory.forms import InventoryItemForm
-from inventory.models import InventoryItem
+from inventory.models import Item, Order
+from inventory.forms import ItemForm, OrderForm, UpdateStockForm
 
 
-class InventoryItemFormTests(TestCase):
+class ItemFormTests(TestCase):
 
-    def test_form_valid_data(self):
-        # Test if the form works with valid data
-        form_data = {
+    def test_item_form_valid(self):
+        """Test that the ItemForm is valid when given valid data"""
+        data = {
             'name': 'Test Item',
-            'quantity': 10,
-            'description': 'A test item for inventory',
+            'quantity': 10
         }
-        form = InventoryItemForm(data=form_data)
-
-        # Check if the form is valid
+        form = ItemForm(data)
         self.assertTrue(form.is_valid())
 
-        # Save the form and check if the object is created in the database
-        form.save()
-        self.assertTrue(InventoryItem.objects.filter(name='Test Item').exists())
-
-    def test_form_invalid_data(self):
-        # Test if the form does not work with invalid data
-        form_data = {
-            'name': '',  # Name is empty, so this should be invalid
-            'quantity': 10,
-            'description': 'A test item without name',
+    def test_item_form_invalid(self):
+        """Test that the ItemForm is invalid when missing required fields"""
+        data = {
+            'name': '',  # Empty name is invalid
+            'quantity': 10
         }
-        form = InventoryItemForm(data=form_data)
-
-        # Check if the form is invalid
+        form = ItemForm(data)
         self.assertFalse(form.is_valid())
+        self.assertIn('name', form.errors)
 
-        # Check if the form contains the appropriate error for the 'name' field
-        self.assertIn('This field is required.', form.errors['name'])
 
-    def test_form_missing_quantity(self):
-        # Test if the form does not work if a required field like quantity is missing
-        form_data = {
-            'name': 'Test Item Without Quantity',
-            'quantity': '',  # Missing quantity
-            'description': 'A test item without quantity',
+class OrderFormTests(TestCase):
+
+    def setUp(self):
+        """Create an item for the order form tests"""
+        self.item = Item.objects.create(name='Test Item', quantity=10)
+
+    def test_order_form_valid(self):
+        """Test that the OrderForm is valid when given valid data"""
+        data = {
+            'item': self.item.pk,
+            'quantity': 5
         }
-        form = InventoryItemForm(data=form_data)
-
-        # Check if the form is invalid
-        self.assertFalse(form.is_valid())
-
-        # Check if the form contains the appropriate error for the 'quantity' field
-        self.assertIn('This field is required.', form.errors['quantity'])
-
-    def test_form_optional_description(self):
-        # Test if the form works with a missing optional field (description)
-        form_data = {
-            'name': 'Test Item Without Description',
-            'quantity': 10,  # Valid quantity
-            'description': '',  # Optional field
-        }
-        form = InventoryItemForm(data=form_data)
-
-        # Check if the form is valid despite the missing description
+        form = OrderForm(data)
         self.assertTrue(form.is_valid())
 
-        # Ensure that the object is created with an empty description
+    def test_order_form_invalid_quantity(self):
+        """Test that the OrderForm is invalid when quantity exceeds stock"""
+        data = {
+            'item': self.item.pk,
+            'quantity': 15  # Exceeds available stock
+        }
+        form = OrderForm(data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('quantity', form.errors)
+
+    def test_order_form_invalid_item(self):
+        """Test that the OrderForm is invalid when item is not provided"""
+        data = {
+            'item': None,  # No item provided
+            'quantity': 5
+        }
+        form = OrderForm(data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('item', form.errors)
+
+
+class UpdateStockFormTests(TestCase):
+
+    def setUp(self):
+        """Create an item to use for the UpdateStockForm tests"""
+        self.item = Item.objects.create(name='Test Item', quantity=10)
+
+    def test_update_stock_form_valid(self):
+        """Test that the UpdateStockForm is valid when given a valid quantity"""
+        data = {
+            'quantity': 15  # Valid quantity update
+        }
+        form = UpdateStockForm(data, instance=self.item)
+        self.assertTrue(form.is_valid())
+
+        # Test that the quantity is updated correctly
         form.save()
-        item = InventoryItem.objects.get(name='Test Item Without Description')
-        self.assertEqual(item.description, '')
+        self.item.refresh_from_db()  # Refresh from the database
+        self.assertEqual(self.item.quantity, 15)
+
+    def test_update_stock_form_invalid(self):
+        """Test that the UpdateStockForm is invalid with a negative quantity"""
+        data = {
+            'quantity': -5  # Invalid negative quantity
+        }
+        form = UpdateStockForm(data, instance=self.item)
+        self.assertFalse(form.is_valid())
+        self.assertIn('quantity', form.errors)
