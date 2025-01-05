@@ -1,15 +1,44 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Inventory List</title>
-</head>
-<body>
-    <h1>Inventory List</h1>
-    <a href="{% url 'add_inventory_item' %}">Add New Item</a>
-    <ul>
-fetch        {% for item in items %}
-            <li>{{ item.name }} - Quantity: {{ item.quantity }}</li>
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Inventory Items</h1>
+    {% if low_stock_items %}
+    <div class="alert alert-warning">
+        <strong>Warning!</strong> The following items are low in stock:
+        <ul>
+            {% for item in low_stock_items %}
+            <li>{{ item.name }} ({{ item.quantity }} left)</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    <div class="d-flex justify-content-between mb-3">
+        <a href="{% url 'create_order' %}" class="btn btn-primary">Create Order</a>
+        <a href="{% url 'add_item' %}" class="btn btn-success">Add Item</a>
+    </div>
+    <table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>
+                <a href="{% url 'update_stock' item.pk %}" class="btn btn-warning btn-sm">Update Stock</a>
+            </td>
+        </tr>
         {% endfor %}
-    </ul>
-</body>
-</html>
+    </tbody>
+</table>
+
+</div>
+{% endblock %}

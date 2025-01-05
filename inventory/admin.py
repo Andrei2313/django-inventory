@@ -1,5 +1,10 @@
 from django.contrib import admin
-from .models import InventoryItem, Notification
+from .models import Item, Order
 
-admin.site.register(InventoryItem)
-admin.site.register(Notification)
+@admin.register(Item)
+class ItemAdmin(admin.ModelAdmin):
+    list_display = ('name', 'quantity')
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('item', 'quantity', 'created_at')
