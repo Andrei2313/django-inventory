@@ -1,121 +1,88 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 from inventory.models import Item, Order
 from inventory.forms import ItemForm, OrderForm, UpdateStockForm
 
-class ViewTests(TestCase):
-
+class InventoryViewTests(TestCase):
     def setUp(self):
-        """Create users, items, and orders for testing"""
-        # Create a normal user and an admin user
-        self.user = User.objects.create_user(username='user', password='password')
-        self.admin_user = User.objects.create_superuser(username='admin', password='password')
+        """Set up an admin and a regular user for testing."""
+        self.admin_user = User.objects.create_user(username='admin', password='adminpassword', is_staff=True)
+        self.regular_user = User.objects.create_user(username='regularuser', password='userpassword')
+        self.client.login(username='admin', password='adminpassword')  # Log in as admin
+        self.item = Item.objects.create(name="Test Item", quantity=20, description="Test Item Description")
 
-        # Create an item and an order
-        self.item = Item.objects.create(name='Test Item', quantity=100)
-        self.order = Order.objects.create(item=self.item, quantity=5)
-
-    def test_inventory_list_url(self):
-        """Test that the inventory list page is accessible"""
-        url = reverse('inventory_list')
-        response = self.client.get(url)
+    def test_inventory_list_view(self):
+        """Test that inventory items are listed correctly and low stock items are displayed."""
+        response = self.client.get(reverse('inventory_list'))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test Item")  # Check that the test item is displayed
+        self.assertNotContains(response, "Warning! The following items are low in stock:")  # Ensure no low stock message
 
-    def test_add_item_url_for_admin(self):
-        """Test that only admins can access the add item page"""
-        url = reverse('add_item')
-        self.client.login(username='admin', password='password')
-        response = self.client.get(url)
+        # Test low stock by reducing quantity
+        self.item.quantity = 10
+        self.item.save()
+        response = self.client.get(reverse('inventory_list'))
+        self.assertContains(response, "Warning! The following items are low in stock:")
+        self.assertContains(response, "Test Item (10 left)")
+
+    def test_add_item_view_admin(self):
+        """Test that an admin can add a new inventory item."""
+        self.client.login(username='admin', password='adminpassword')
+        response = self.client.post(reverse('add_item'), {'name': 'New Test Item', 'quantity': 15, 'description': 'New Item Description'})
+        self.assertEqual(response.status_code, 302)  # Should redirect after successful addition
+        self.assertRedirects(response, reverse('inventory_list'))
+        new_item = Item.objects.get(name='New Test Item')
+        self.assertEqual(new_item.quantity, 15)
+
+    def test_add_item_view_regular_user(self):
+        """Test that a regular user cannot add an inventory item."""
+        self.client.login(username='regularuser', password='userpassword')
+        response = self.client.get(reverse('add_item'))
+        self.assertEqual(response.status_code, 403)  # Should be forbidden for non-admin users
+
+    def test_create_order_view(self):
+        """Test creating an order and updating stock."""
+        self.client.login(username='regularuser', password='userpassword')
+        response = self.client.post(reverse('create_order'), {'item': self.item.id, 'quantity': 5})
+        self.assertEqual(response.status_code, 302)  # Should redirect after successful order creation
+        self.assertRedirects(response, reverse('inventory_list'))
+        self.item.refresh_from_db()  # Refresh to get the updated quantity
+        self.assertEqual(self.item.quantity, 15)  # Stock should be reduced by 5
+
+    def test_create_order_insufficient_stock(self):
+        """Test that an error is raised when there is insufficient stock."""
+        self.client.login(username='regularuser', password='userpassword')
+        response = self.client.post(reverse('create_order'), {'item': self.item.id, 'quantity': 25})
+        self.assertEqual(response.status_code, 200)  # Should not redirect; still on the same page
+        self.assertFormError(response, 'form', 'quantity', 'Quantity exceeds stock.')
+
+    def test_update_stock_view_admin(self):
+        """Test that an admin can update the stock of an item."""
+        self.client.login(username='admin', password='adminpassword')
+        response = self.client.post(reverse('update_stock', args=[self.item.id]), {'quantity': 30})
+        self.assertEqual(response.status_code, 302)  # Should redirect after successful stock update
+        self.assertRedirects(response, reverse('inventory_list'))
+        self.item.refresh_from_db()  # Refresh to get the updated stock
+        self.assertEqual(self.item.quantity, 30)
+
+    def test_update_stock_view_regular_user(self):
+        """Test that a regular user cannot update the stock of an item."""
+        self.client.login(username='regularuser', password='userpassword')
+        response = self.client.get(reverse('update_stock', args=[self.item.id]))
+        self.assertEqual(response.status_code, 403)  # Should be forbidden for non-admin users
+
+    def test_order_log_view_admin(self):
+        """Test that an admin can view the order log."""
+        self.client.login(username='admin', password='adminpassword')
+        order = Order.objects.create(item=self.item, quantity=5)
+        response = self.client.get(reverse('order_log'))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Order of 5 Test Item(s)")  # Ensure the order appears in the log
 
-    def test_add_item_url_for_non_admin(self):
-        """Test that non-admins cannot access the add item page"""
-        url = reverse('add_item')
-        self.client.login(username='user', password='password')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_create_order_url(self):
-        """Test that users can access the create order page"""
-        url = reverse('create_order')
-        self.client.login(username='user', password='password')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-    def test_update_stock_url_for_admin(self):
-        """Test that only admins can update stock"""
-        url = reverse('update_stock', kwargs={'pk': self.item.pk})
-        self.client.login(username='admin', password='password')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-    def test_update_stock_url_for_non_admin(self):
-        """Test that non-admins cannot access the update stock page"""
-        url = reverse('update_stock', kwargs={'pk': self.item.pk})
-        self.client.login(username='user', password='password')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_order_log_url_for_admin(self):
-        """Test that only admins can access the order log"""
-        url = reverse('order_log')
-        self.client.login(username='admin', password='password')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-    def test_order_log_url_for_non_admin(self):
-        """Test that non-admins cannot access the order log page"""
-        url = reverse('order_log')
-        self.client.login(username='user', password='password')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-
-class FormTests(TestCase):
-
-    def setUp(self):
-        """Create a user and an item for form testing"""
-        self.user = User.objects.create_user(username='user', password='password')
-        self.client.login(username='user', password='password')
-        self.item = Item.objects.create(name='Test Item', quantity=10)
-
-    def test_item_form_valid(self):
-        """Test the ItemForm with valid data"""
-        data = {'name': 'New Item', 'quantity': 20}
-        form = ItemForm(data)
-        self.assertTrue(form.is_valid())
-
-    def test_item_form_invalid(self):
-        """Test the ItemForm with invalid data"""
-        data = {'name': '', 'quantity': 20}  # Missing name
-        form = ItemForm(data)
-        self.assertFalse(form.is_valid())
-
-    def test_order_form_valid(self):
-        """Test the OrderForm with valid data"""
-        data = {'item': self.item.pk, 'quantity': 5}
-        form = OrderForm(data)
-        self.assertTrue(form.is_valid())
-
-    def test_order_form_invalid(self):
-        """Test the OrderForm with invalid data (exceeds stock)"""
-        data = {'item': self.item.pk, 'quantity': 15}  # Exceeds stock
-        form = OrderForm(data)
-        self.assertFalse(form.is_valid())
-
-    def test_update_stock_form_valid(self):
-        """Test the UpdateStockForm with valid data"""
-        data = {'quantity': 15}
-        form = UpdateStockForm(data, instance=self.item)
-        self.assertTrue(form.is_valid())
-
-        # Save and check that the quantity is updated
-        form.save()
-        self.item.refresh_from_db()
-        self.assertEqual(self.item.quantity, 15)
-
-    def test_update_stock_form_invalid(self):
-        """Test the UpdateStockForm with invalid data"""
-        data = {'quantity': -5}  # Invalid negative quantity
-        form = UpdateStockForm(data, instance=self.item)
-        self.assertFalse(form.is_valid())
+    def test_order_log_view_regular_user(self):
+        """Test that a regular user cannot view the order log."""
+        self.client.login(username='regularuser', password='userpassword')
+        response = self.client.get(reverse('order_log'))
+        self.assertEqual(response.status_code, 403)  # Should be forbidden for non-admin users

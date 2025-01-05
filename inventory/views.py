@@ -12,7 +12,7 @@ def is_admin(user):
 @login_required
 def inventory_list(request):
     items = Item.objects.all()
-    low_stock_items = items.filter(quantity__lt=15)
+    low_stock_items = items.filter(quantity__lt=15)  # Assuming you want items with quantity less than 15
     return render(request, 'inventory/inventory_list.html', {'items': items, 'low_stock_items': low_stock_items})
 
 # View for admins to add new items
