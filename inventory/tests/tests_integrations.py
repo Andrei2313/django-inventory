@@ -2,7 +2,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from unittest.mock import patch
-from inventory.models import InventoryItem
+from inventory.models import Item
 
 
 class InventoryItemIntegrationTests(TestCase):
@@ -21,7 +21,7 @@ class InventoryItemIntegrationTests(TestCase):
         }
 
         # Mock the save method to simulate saving the InventoryItem without hitting the database
-        mock_save.return_value = InventoryItem(
+        mock_save.return_value = Item(
             name='Integrated Test Item with Mocking',
             quantity=25,
             description='This item is tested through integration and mocking.'
@@ -47,7 +47,7 @@ class InventoryItemIntegrationTests(TestCase):
         """
         # Mock the `all()` method to return a mocked list of inventory items
         mock_all.return_value = [
-            InventoryItem(name='Mocked Test Item', quantity=10, description='Mocked description')
+            Item(name='Mocked Test Item', quantity=10, description='Mocked description')
         ]
 
         # Send a GET request to the inventory list page

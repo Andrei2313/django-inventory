@@ -1,8 +1,8 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
-from .models import Item, Order
-from .forms import ItemForm, OrderForm, UpdateStockForm
+from inventory.models import Item, Order
+from inventory.forms import ItemForm, OrderForm, UpdateStockForm
 
 class ViewTests(TestCase):
 
