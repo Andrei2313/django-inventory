@@ -26,7 +26,7 @@ class OrderFormTests(TestCase):
 
     def test_order_form_invalid_quantity(self):
         """Test that the OrderForm is invalid when quantity exceeds stock."""
-        form_data = {'item': self.item.id, 'quantity': 25}  # More than available stock
+        form_data = {'item': self.item.id, 'quantity': 25}
         form = OrderForm(data=form_data)
         self.assertFalse(form.is_valid())
 
@@ -41,4 +41,4 @@ class UpdateStockFormTests(TestCase):
         """Test that the UpdateStockForm is invalid with a negative quantity."""
         item = Item.objects.create(name="Test Item", quantity=10, description="Test Item Description")
         form = UpdateStockForm(data={'quantity': -5}, instance=item)
-        self.assertFalse(form.is_valid())  # Should be invalid due to negative quantity
+        self.assertFalse(form.is_valid())

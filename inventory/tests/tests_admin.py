@@ -15,10 +15,10 @@ class AdminTests(TestCase):
         """Test that the Item model appears in the admin interface."""
         response = self.client.get(reverse('admin:inventory_item_changelist'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Test Item')  # Test Item should appear in the admin list
+        self.assertContains(response, 'Test Item')
 
     def test_order_admin(self):
         """Test that the Order model appears in the admin interface."""
         response = self.client.get(reverse('admin:inventory_order_changelist'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Order of 5 Test Item(s)')  # The created order should be in the admin list
+        self.assertContains(response, 'Order of 5 Test Item(s)')

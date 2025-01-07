@@ -11,11 +11,18 @@ class Item(models.Model):
 
     def check_low_stock(self):
         """Checks if the stock is below 15."""
-        return self.quantity < 15  # Direct comparison to self.quantity
+        if self.quantity < 15:
+            return True
+        return False
 
+    # Optionally, you can define an is_low_stock method as well
     def is_low_stock(self):
         """Checks if the stock is below 15 using the check_low_stock method."""
         return self.check_low_stock()
+
+    def __str__(self):
+        """Return a human-readable string representation of the item."""
+        return self.name  # This will display the item's name instead of the default "Item Object (1)"
 
 class Order(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='orders')
