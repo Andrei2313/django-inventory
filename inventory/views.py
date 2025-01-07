@@ -12,7 +12,7 @@ def is_admin(user):
 @login_required
 def inventory_list(request):
     items = Item.objects.all()
-    low_stock_items = items.filter(quantity__lt=15)
+    low_stock_items = items.filter(quantity__lt=15)  # Assuming you want items with quantity less than 15
     return render(request, 'inventory/inventory_list.html', {'items': items, 'low_stock_items': low_stock_items})
 
 # View for admins to add new items
@@ -35,15 +35,27 @@ def create_order(request):
     if request.method == 'POST':
         form = OrderForm(request.POST)
         if form.is_valid():
-            try:
-                form.save()
-                messages.success(request, "Order created successfully!")
-                return redirect('inventory_list')
-            except ValueError as e:
-                messages.error(request, str(e))
+            # Manually create and save the order instance
+            item = form.cleaned_data['item']
+            quantity = form.cleaned_data['quantity']
+
+            # Check if there is enough stock
+            if item.quantity < quantity:
+                messages.error(request, "Quantity exceeds stock.")
+                return redirect('create_order')
+
+            # Create the order and deduct the stock
+            order = Order(item=item, quantity=quantity)
+            order.save()
+            item.save()
+
+            messages.success(request, "Order created successfully!")
+            return redirect('inventory_list')
     else:
         form = OrderForm()
+
     return render(request, 'inventory/create_order.html', {'form': form})
+
 
 # View for admins to update stock
 @login_required

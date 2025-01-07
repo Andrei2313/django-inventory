@@ -8,7 +8,7 @@
         <strong>Warning!</strong> The following items are low in stock:
         <ul>
             {% for item in low_stock_items %}
-            <li>{{ item.name }} ({{ item.quantity }} left)</li>
+                <li>{{ item.name }} ({{ item.quantity }} left)</li>
             {% endfor %}
         </ul>
     </div>
@@ -28,7 +28,7 @@
     </thead>
     <tbody>
         {% for item in items %}
-        <tr>
+        <tr class="{% if item.quantity < 15 %}table-warning{% endif %}">
             <td>{{ forloop.counter }}</td>
             <td>{{ item.name }}</td>
             <td>{{ item.quantity }}</td>
@@ -39,6 +39,7 @@
         {% endfor %}
     </tbody>
 </table>
+
 
 </div>
 {% endblock %}
